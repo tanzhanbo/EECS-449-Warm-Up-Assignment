@@ -2,13 +2,11 @@
 
 set -Eeuo pipefail
 
-CONTAINER_NAME="mongodb"
-
 echo "Stopping MongoDB container..."
-docker stop $CONTAINER_NAME || echo "No running container with name $CONTAINER_NAME."
+docker stop mongodb || echo "No running container with name mongodb."
 
 echo "Removing MongoDB container..."
-docker rm $CONTAINER_NAME || echo "No container to remove with name $CONTAINER_NAME."
+docker rm mongodb || echo "No container to remove with name mongodb."
 
 echo "Killing processes on port 27017..."
 sudo kill $(sudo lsof -t -i :27017) || echo "No process found on port 27017."
