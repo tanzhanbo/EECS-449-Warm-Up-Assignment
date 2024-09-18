@@ -1,0 +1,50 @@
+#!/bin/bash
+
+set -Eeuo pipefail
+
+INIT_DIR="cd ~/eecs449/warmup"
+ENV="source env/bin/activate"
+INIT_TERMINAL="$INIT_DIR && $ENV"
+
+if [ -z "${VIRTUAL_ENV:-}" ]; then
+    echo "Virtual environment not activated. Activating..."
+    $ENV
+else
+    echo "Virtual environment is already activated."
+fi
+
+if ! docker run --name mongodb -p 27017:27017 -d mongodb/mongodb-community-server:latest --replSet my-rs; then
+    echo "docker run failed. Attempting to stop and remove any running instances."
+    echo "Killing processes on port 27017..."
+
+    sudo kill $(sudo lsof -t -i :27017) || echo "No process on port 27017."
+
+    if ! docker rm /mongodb; then
+        echo "docker rm failed. Trying to stop the container first."
+
+        docker stop /mongodb || echo "Failed to stop container."
+        docker rm /mongodb || echo "Failed to remove container."
+    fi
+
+    docker run --name mongodb -p 27017:27017 -d mongodb/mongodb-community-server:latest --replSet my-rs
+    echo "Initializing MongoDB replica set..."
+    mongosh --port 27017 --eval "rs.initiate({_id: 'my-rs', members: [{_id: 0, host: 'localhost:27017'}]})"
+    echo "MongoDB replica set initialized."
+    mongosh --port 27017 --eval "exit"
+    echo "Exited mongosh."
+fi
+echo "MongoDB container is up and running."
+
+echo "Starting Ollama service in a new terminal..."
+gnome-terminal -- bash -c "$INIT_TERMINAL && export OLLAMA_HOST=localhost:8888 && ollama serve; exec bash"
+
+echo "Starting Streamlit client in a new terminal..."
+gnome-terminal -- bash -c "$INIT_TERMINAL && jac streamlit client.jac; exec bash"
+
+echo "Starting Jac server in a new terminal..."
+gnome-terminal -- bash -c "$INIT_TERMINAL && DATABASE_HOST=mongodb://localhost:27017/?replicaSet=my-rs jac serve server.jac; exec bash"
+
+echo "----------------------------------------------------------------"
+echo "Complete."
+echo "Doc: http://localhost:8000/docs"
+echo "Talking: http://localhost:8501/"
