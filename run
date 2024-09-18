@@ -2,51 +2,96 @@
 
 set -Eeuo pipefail
 
-INIT_DIR="cd ~/eecs449/warmup"
-ENV="source env/bin/activate"
-INIT_TERMINAL="$INIT_DIR && $ENV"
+usage() {
+    echo "Usage: $0 (start|stop|restart)"
+}
 
-if [ -z "${VIRTUAL_ENV:-}" ]; then
-    echo "Virtual environment not activated. Activating..."
-    $ENV
-else
-    echo "Virtual environment is already activated."
+if [ $# -ne 1 ]; then
+    usage
+    exit 1
 fi
 
-if ! docker run --name mongodb -p 27017:27017 -d mongodb/mongodb-community-server:latest --replSet my-rs; then
-    echo "docker run failed. Attempting to stop and remove any running instances."
-    echo "Killing processes on port 27017..."
+start() {
+    INIT_DIR="cd ~/eecs449/warmup"
+    ENV="source env/bin/activate"
+    INIT_TERMINAL="$INIT_DIR && $ENV"
 
-    sudo kill $(sudo lsof -t -i :27017) || echo "No process on port 27017."
-
-    if ! docker rm /mongodb; then
-        echo "docker rm failed. Trying to stop the container first."
-
-        docker stop /mongodb || echo "Failed to stop container."
-        docker rm /mongodb || echo "Failed to remove container."
+    if [ -z "${VIRTUAL_ENV:-}" ]; then
+        echo "Virtual environment not activated. Activating..."
+        $ENV
+    else
+        echo "Virtual environment is already activated."
     fi
 
-    docker run --name mongodb -p 27017:27017 -d mongodb/mongodb-community-server:latest --replSet my-rs
-    echo "Initializing MongoDB replica set..."
-    mongosh --port 27017 --eval "rs.initiate({_id: 'my-rs', members: [{_id: 0, host: 'localhost:27017'}]})"
-    echo "MongoDB replica set initialized."
-    mongosh --port 27017 --eval "exit"
-    echo "Exited mongosh."
-fi
-echo "MongoDB container is up and running."
+    if ! docker run --name mongodb -p 27017:27017 -d mongodb/mongodb-community-server:latest --replSet my-rs; then
+        echo "docker run failed. Attempting to stop and remove any running instances."
+        echo "Killing processes on port 27017..."
 
-echo "Starting Ollama service in a new terminal..."
-gnome-terminal -- bash -c "$INIT_TERMINAL && export OLLAMA_HOST=localhost:8888 && ollama serve; exec bash"
+        sudo kill $(sudo lsof -t -i :27017) || echo "No process on port 27017."
 
-echo "Starting Streamlit client in a new terminal..."
-gnome-terminal -- bash -c "$INIT_TERMINAL && jac streamlit client.jac; exec bash"
+        if ! docker rm /mongodb; then
+            echo "docker rm failed. Trying to stop the container first."
 
-echo "Starting Jac server in a new terminal..."
-gnome-terminal -- bash -c "$INIT_TERMINAL && DATABASE_HOST=mongodb://localhost:27017/?replicaSet=my-rs jac serve server.jac; exec bash"
+            docker stop /mongodb || echo "Failed to stop container."
+            docker rm /mongodb || echo "Failed to remove container."
+        fi
 
-echo "----------------------------------------------------------------"
-echo "Complete."
-echo "Doc: http://localhost:8000/docs"
-echo "Talking: http://localhost:8501/"
-echo "Warmup homework website: https://www.jac-lang.org//learn/tutorial/readme/"
-echo "Warmup homework canvas page: https://umich.instructure.com/courses/707572/assignments/2469747?module_item_id=3877403"
+        docker run --name mongodb -p 27017:27017 -d mongodb/mongodb-community-server:latest --replSet my-rs
+        echo "Initializing MongoDB replica set..."
+        mongosh --port 27017 --eval "rs.initiate({_id: 'my-rs', members: [{_id: 0, host: 'localhost:27017'}]})"
+        echo "MongoDB replica set initialized."
+        mongosh --port 27017 --eval "exit"
+        echo "Exited mongosh."
+    fi
+    echo "MongoDB container is up and running."
+
+    echo "Starting Ollama service in a new terminal..."
+    gnome-terminal -- bash -c "$INIT_TERMINAL && export OLLAMA_HOST=localhost:8888 && ollama serve; exec bash"
+
+    echo "Starting Streamlit client in a new terminal..."
+    gnome-terminal -- bash -c "$INIT_TERMINAL && jac streamlit client.jac; exec bash"
+
+    echo "Starting Jac server in a new terminal..."
+    gnome-terminal -- bash -c "$INIT_TERMINAL && DATABASE_HOST=mongodb://localhost:27017/?replicaSet=my-rs jac serve server.jac; exec bash"
+
+    echo "----------------------------------------------------------------"
+    echo "Complete."
+    echo "Doc: http://localhost:8000/docs"
+    echo "Talking: http://localhost:8501/"
+    echo "Warmup homework website: https://www.jac-lang.org//learn/tutorial/readme/"
+    echo "Warmup homework canvas page: https://umich.instructure.com/courses/707572/assignments/2469747?module_item_id=3877403"
+}
+
+stop() {
+    echo "Stopping MongoDB container..."
+    docker stop mongodb || echo "No running container with name mongodb."
+
+    echo "Removing MongoDB container..."
+    docker rm mongodb || echo "No container to remove with name mongodb."
+
+    echo "Killing processes on port 27017..."
+    sudo kill $(sudo lsof -t -i :27017) || echo "No process found on port 27017."
+
+    echo "Killing all gnome-terminal processes..."
+    pkill -f gnome-terminal || echo "No gnome-terminal processes found."
+
+    echo "Cleanup complete."
+}
+
+case $1 in
+    "start")
+        start
+        ;;
+    "stop")
+        stop
+        ;;
+    "restart")
+        echo "Restarting services..."
+        stop
+        start
+        ;;
+    *)
+        usage
+        exit 1
+        ;;
+esac
