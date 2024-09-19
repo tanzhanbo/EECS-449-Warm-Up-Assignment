@@ -5,7 +5,8 @@
 import:py from mtllm.llms {Ollama}
 
 # glob llm = Ollama(model_name='llama3.1');
-glob llm = Ollama(model_name='gemma');
+# glob llm = Ollama(model_name='gemma');
+glob llm = Ollama(model_name='qwen2');
 
 import:jac from rag {RagEngine}
 glob rag_engine:RagEngine = RagEngine();

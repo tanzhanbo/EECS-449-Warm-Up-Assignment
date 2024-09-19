@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 
 usage() {
-    echo "Usage: $0 (start|stop|restart)"
+    echo "Usage: $0 (start|stop|restart|auth)"
 }
 
 if [ $# -ne 1 ]; then
@@ -37,12 +37,12 @@ start() {
         fi
 
         docker run --name mongodb -p 27017:27017 -d mongodb/mongodb-community-server:latest --replSet my-rs
-        echo "Initializing MongoDB replica set..."
-        mongosh --port 27017 --eval "rs.initiate({_id: 'my-rs', members: [{_id: 0, host: 'localhost:27017'}]})"
-        echo "MongoDB replica set initialized."
-        mongosh --port 27017 --eval "exit"
-        echo "Exited mongosh."
     fi
+    echo "Initializing MongoDB replica set..."
+    mongosh --port 27017 --eval "rs.initiate({_id: 'my-rs', members: [{_id: 0, host: 'localhost:27017'}]})"
+    echo "MongoDB replica set initialized."
+    mongosh --port 27017 --eval "exit"
+    echo "Exited mongosh."
     echo "MongoDB container is up and running."
 
     echo "Starting Ollama service in a new terminal..."
@@ -69,13 +69,51 @@ stop() {
     echo "Removing MongoDB container..."
     docker rm mongodb || echo "No container to remove with name mongodb."
 
-    echo "Killing processes on port 27017..."
-    sudo kill $(sudo lsof -t -i :27017) || echo "No process found on port 27017."
+    # echo "Killing processes on port 27017..."
+    # sudo kill $(sudo lsof -t -i :27017) || echo "No process found on port 27017."
 
     echo "Killing all gnome-terminal processes..."
     pkill -f gnome-terminal || echo "No gnome-terminal processes found."
 
     echo "Cleanup complete."
+}
+
+auth() {
+    echo "Registering new user..."
+    register_response=$(curl --location --silent 'http://localhost:8000/user/register' \
+    --header 'Content-Type: application/json' \
+    --header 'Accept: application/json' \
+    --data '{
+        "password": "password",
+        "email": "test@mail.com"
+    }')
+    echo $register_response
+
+    echo "----------------------------------------------------------------"
+
+    echo "Logging in..."
+    login_response=$(curl --location --silent 'http://localhost:8000/user/login' \
+    --header 'Content-Type: application/json' \
+    --header 'Accept: application/json' \
+    --data '{
+        "password": "password",
+        "email": "test@mail.com"
+    }')
+    echo $login_response
+
+    echo "----------------------------------------------------------------"
+
+    token=$(echo $login_response | grep -oP '"token":"\K[^"]+')
+    echo $token
+
+    # echo "Try API..."
+    # read -p "Enter the walker you want to interact with: " walker
+
+    # echo "Trying API with walker: $walker..."
+    # response=$(curl -X POST "http://localhost:8000/walker/$walker" -H "Authorization: Bearer $token")
+
+
+    # echo "Interact Response: $response"
 }
 
 case $1 in
@@ -89,6 +127,9 @@ case $1 in
         echo "Restarting services..."
         stop
         start
+        ;;
+    "auth")
+        auth
         ;;
     *)
         usage
