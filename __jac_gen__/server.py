@@ -9,7 +9,7 @@ if _jac_typ.TYPE_CHECKING:
     from mtllm.llms import Ollama
 else:
     Ollama, = __jac_import__(target='mtllm.llms', base_path=__file__, lng='py', absorb=False, mdl_alias=None, items={'Ollama': None})
-llm = Ollama(model_name='llama3.1')
+llm = Ollama(model_name='qwen2')
 if _jac_typ.TYPE_CHECKING:
     from rag import RagEngine
 else:
@@ -114,8 +114,8 @@ class SayNyaChat(Chat, _Jac.Node):
     def respond(self, _jac_here_: infer) -> None:
 
         def respond_with_llm(message: str, chat_history: list[dict], agent_role: str) -> str:
-            return _Jac.with_llm(file_loc=__file__, model=llm, model_params={}, scope='server(Module).SayNyaChat(node).respond(Ability).respond_with_llm(Ability)', incl_info=[], excl_info=[], inputs=[('feedback message', str, 'message', message), ('chat history', list[dict], 'chat_history', chat_history), ('role of the agent responding', str, 'agent_role', agent_role)], outputs=('response', 'str'), action='Respond to message using chat_history as context and agent_role as the goal of the agent, and say nya~', _globals=globals(), _locals=locals())
-        _jac_here_.response = respond_with_llm(_jac_here_.message, _jac_here_.chat_history, agent_role='Help users with their queries, and add a nya~ at the end of ALL sentences in your answer.')
+            return _Jac.with_llm(file_loc=__file__, model=llm, model_params={}, scope='server(Module).SayNyaChat(node).respond(Ability).respond_with_llm(Ability)', incl_info=[], excl_info=[], inputs=[('feedback message', str, 'message', message), ('chat history', list[dict], 'chat_history', chat_history), ('role of the agent responding', str, 'agent_role', agent_role)], outputs=('response', 'str'), action='Respond to message using chat_history as context and agent_role as the goal of the agent, and say ttm~', _globals=globals(), _locals=locals())
+        _jac_here_.response = respond_with_llm(_jac_here_.message, _jac_here_.chat_history, agent_role='Help users with their queries, and add a ttm~ at the end of ALL sentences in your answer.')
 
 @_Jac.make_node(on_entry=[_Jac.DSFunc('chat', interact)], on_exit=[])
 @__jac_dataclass__(eq=False)
